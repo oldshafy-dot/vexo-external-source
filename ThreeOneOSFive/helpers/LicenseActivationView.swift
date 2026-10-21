@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct LicenseActivationView: View {
@@ -8,11 +9,31 @@ struct LicenseActivationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AnimatedHyperBackdrop()
-                    .ignoresSafeArea()
+                // Native SwiftUI background; no external view required.
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.015, green: 0.025, blue: 0.075),
+                        Color(red: 0.025, green: 0.055, blue: 0.15),
+                        Color.black
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                Color.black.opacity(0.18)
-                    .ignoresSafeArea()
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.16))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 90)
+                    .offset(x: 130, y: -260)
+                    .allowsHitTesting(false)
+
+                Circle()
+                    .fill(AppTheme.secondaryAccent.opacity(0.10))
+                    .frame(width: 230, height: 230)
+                    .blur(radius: 85)
+                    .offset(x: -130, y: 260)
+                    .allowsHitTesting(false)
 
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
@@ -36,12 +57,22 @@ struct LicenseActivationView: View {
 
                             VStack(spacing: 16) {
                                 HStack(spacing: 10) {
-                                    Image(systemName: manager.isBusy ? "arrow.triangle.2.circlepath" : "key.fill")
-                                        .foregroundStyle(AppTheme.secondaryAccent)
-                                        .font(.system(size: 16, weight: .bold))
-                                    Text(manager.isBusy ? "Package initializing" : "Key required")
-                                        .font(.system(size: 16, weight: .black, design: .rounded))
-                                        .foregroundStyle(.white)
+                                    Image(
+                                        systemName: manager.isBusy
+                                        ? "arrow.triangle.2.circlepath"
+                                        : "key.fill"
+                                    )
+                                    .foregroundStyle(AppTheme.secondaryAccent)
+                                    .font(.system(size: 16, weight: .bold))
+
+                                    Text(
+                                        manager.isBusy
+                                        ? "Package initializing"
+                                        : "Key required"
+                                    )
+                                    .font(.system(size: 16, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+
                                     Spacer()
                                 }
 
@@ -60,29 +91,72 @@ struct LicenseActivationView: View {
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 16)
                                     .frame(height: 54)
-                                    .background(Color.gray.opacity(0.22), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                                    .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(AppTheme.accent.opacity(0.48), lineWidth: 1))
+                                    .background(
+                                        Color.gray.opacity(0.22),
+                                        in: RoundedRectangle(
+                                            cornerRadius: 17,
+                                            style: .continuous
+                                        )
+                                    )
+                                    .overlay {
+                                        RoundedRectangle(
+                                            cornerRadius: 17,
+                                            style: .continuous
+                                        )
+                                        .stroke(
+                                            AppTheme.accent.opacity(0.48),
+                                            lineWidth: 1
+                                        )
+                                    }
                                     .id("license-field")
 
-                                Toggle("Remember key on this device", isOn: $manager.rememberKey)
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white.opacity(0.72))
-                                    .tint(AppTheme.accent)
+                                Toggle(
+                                    "Remember key on this device",
+                                    isOn: $manager.rememberKey
+                                )
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.72))
+                                .tint(AppTheme.accent)
 
                                 Button(action: activate) {
                                     HStack(spacing: 9) {
-                                        Image(systemName: manager.isBusy ? "hourglass" : "checkmark.shield.fill")
-                                        Text(manager.isBusy ? "VERIFYING…" : "VERIFY AND CONTINUE")
+                                        Image(
+                                            systemName: manager.isBusy
+                                            ? "hourglass"
+                                            : "checkmark.shield.fill"
+                                        )
+
+                                        Text(
+                                            manager.isBusy
+                                            ? "VERIFYING…"
+                                            : "VERIFY AND CONTINUE"
+                                        )
                                     }
                                     .font(.system(size: 14, weight: .black, design: .rounded))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity, minHeight: 54)
-                                    .background(AppTheme.accent, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                                    .shadow(color: AppTheme.accent.opacity(0.30), radius: 14, y: 7)
+                                    .background(
+                                        AppTheme.accent,
+                                        in: RoundedRectangle(
+                                            cornerRadius: 17,
+                                            style: .continuous
+                                        )
+                                    )
+                                    .shadow(
+                                        color: AppTheme.accent.opacity(0.30),
+                                        radius: 14,
+                                        y: 7
+                                    )
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || manager.isBusy)
-                                .opacity(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.48 : 1)
+                                .disabled(
+                                    key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    || manager.isBusy
+                                )
+                                .opacity(
+                                    key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    ? 0.48 : 1
+                                )
 
                                 if let message = manager.message {
                                     Text(message)
@@ -92,7 +166,13 @@ struct LicenseActivationView: View {
                                         .frame(maxWidth: .infinity)
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 10)
-                                        .background(Color.gray.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .background(
+                                            Color.gray.opacity(0.20),
+                                            in: RoundedRectangle(
+                                                cornerRadius: 14,
+                                                style: .continuous
+                                            )
+                                        )
                                 }
 
                                 if let contactOwner = manager.contactOwner,
@@ -103,13 +183,33 @@ struct LicenseActivationView: View {
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundStyle(AppTheme.secondaryAccent)
                                     .buttonStyle(.plain)
-                                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                    .transition(
+                                        .opacity.combined(with: .move(edge: .bottom))
+                                    )
                                 }
                             }
                             .padding(20)
-                            .background(.ultraThinMaterial.opacity(0.72), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-                            .background(Color.gray.opacity(0.18), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(Color.white.opacity(0.16), lineWidth: 1))
+                            .background(
+                                .ultraThinMaterial.opacity(0.72),
+                                in: RoundedRectangle(
+                                    cornerRadius: 25,
+                                    style: .continuous
+                                )
+                            )
+                            .background(
+                                Color.gray.opacity(0.18),
+                                in: RoundedRectangle(
+                                    cornerRadius: 25,
+                                    style: .continuous
+                                )
+                            )
+                            .overlay {
+                                RoundedRectangle(
+                                    cornerRadius: 25,
+                                    style: .continuous
+                                )
+                                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                            }
                             .padding(.horizontal, 22)
                             .padding(.top, 26)
                             .id("activation-card")
@@ -122,7 +222,10 @@ struct LicenseActivationView: View {
                     .scrollDismissesKeyboard(.interactively)
                     .onChange(of: keyFocused) { focused in
                         guard focused else { return }
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("activation-card", anchor: .center) }
+
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            proxy.scrollTo("activation-card", anchor: .center)
+                        }
                     }
                 }
             }
@@ -137,12 +240,17 @@ struct LicenseActivationView: View {
 
     private func ownerURL(from value: String) -> URL? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
         if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
             return URL(string: trimmed)
         }
+
         if trimmed.hasPrefix("@") {
-            return URL(string: "https://t.me/" + String(trimmed.dropFirst()))
+            return URL(
+                string: "https://t.me/" + String(trimmed.dropFirst())
+            )
         }
+
         return URL(string: "https://t.me/" + trimmed)
     }
 }
