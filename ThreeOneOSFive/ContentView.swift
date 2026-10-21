@@ -1,5 +1,6 @@
 
 import SwiftUI
+import Foundation
 
 struct ContentView: View {
     @State private var selectedGame = "free_fire"
@@ -9,7 +10,6 @@ struct ContentView: View {
     @State private var lastUpdated: Date?
 
     private let api = VexoPatchAPI()
-
     private let blue = Color(red: 0.12, green: 0.48, blue: 0.95)
 
     var body: some View {
@@ -42,6 +42,7 @@ struct ContentView: View {
                             ProgressView("Loading online patches…")
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 40)
+
                         } else if let errorMessage {
                             VStack(spacing: 10) {
                                 Image(systemName: "wifi.exclamationmark")
@@ -63,6 +64,7 @@ struct ContentView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(24)
+
                         } else if patches.isEmpty {
                             VStack(spacing: 10) {
                                 Image(systemName: "doc.text.magnifyingglass")
@@ -79,8 +81,9 @@ struct ContentView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(24)
+
                         } else {
-                            ForEach(Array(patches.enumerated()), id: \.offset) { _, patch in
+                            ForEach(patches) { patch in
                                 patchRow(patch)
                             }
                         }
@@ -158,10 +161,15 @@ struct ContentView: View {
 
         return Button {
             guard selectedGame != value else { return }
+
             selectedGame = value
             patches = []
             errorMessage = nil
-            Task { await loadPatches() }
+            lastUpdated = nil
+
+            Task {
+                await loadPatches()
+            }
         } label: {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
@@ -172,7 +180,10 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(selected ? blue : Color.gray.opacity(0.3), lineWidth: 1)
+                        .stroke(
+                            selected ? blue : Color.gray.opacity(0.3),
+                            lineWidth: 1
+                        )
                 }
         }
         .buttonStyle(.plain)
@@ -194,9 +205,12 @@ struct ContentView: View {
                         .foregroundStyle(Color.black)
                         .lineLimit(2)
 
-                    Text(patch.version.map { "Version \($0)" } ?? "Online package")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    Text(
+                        patch.version.map { "Version \($0)" }
+                            ?? "Online package"
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 0)
@@ -233,6 +247,7 @@ struct ContentView: View {
             patches = result
             lastUpdated = Date()
         } catch {
+            patches = []
             errorMessage = "Please check your internet connection and API settings."
         }
 
@@ -240,11 +255,15 @@ struct ContentView: View {
     }
 }
 
-private struct RemotePatchRecord: Decodable {
+private struct RemotePatchRecord: Decodable, Identifiable {
     let version: String?
     let download_url: URL?
     let file_path: String?
     let notes: String?
+
+    var id: String {
+        file_path ?? download_url?.absoluteString ?? version ?? UUID().uuidString
+    }
 
     var displayName: String {
         let raw = file_path?
