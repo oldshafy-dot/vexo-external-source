@@ -1,4 +1,3 @@
-
 import Combine
 import Foundation
 import Security
@@ -14,9 +13,11 @@ final class LicenseManager: ObservableObject {
 
     private let service = "com.vexo.external.activation"
     private let keyAccount = "license-key"
+
     private let endpoint = URL(
         string: "https://c--46026e77-f295-431b-b24d-5d0b34c299d0-prod.lovable.cloud/rest/v1/rpc/verify_key"
     )!
+
     private let apiKey = "sb_publishable_w4SSt67-eYUVd-YLMKMS7A_J55PowVa"
     private var lastAttemptAt: Date?
 
@@ -56,18 +57,6 @@ final class LicenseManager: ObservableObject {
     private func verify(key: String, saveIfValid: Bool) {
         guard !isBusy else { return }
 
-        #if DEBUG
-        // Development-only mock activation for testing app navigation.
-        isBusy = false
-        isActive = true
-        expirationDate = nil
-        message = "Development test mode: activation successful"
-
-        if saveIfValid {
-            save(key, for: keyAccount)
-        }
-        return
-        #else
         isBusy = true
         isActive = false
         message = "Verifying key…"
@@ -86,6 +75,7 @@ final class LicenseManager: ObservableObject {
                     "application/json",
                     forHTTPHeaderField: "Accept"
                 )
+
                 request.httpBody = try JSONSerialization.data(
                     withJSONObject: ["check_key": key]
                 )
@@ -100,8 +90,8 @@ final class LicenseManager: ObservableObject {
                 }
 
                 let parsed = try JSONSerialization.jsonObject(with: data)
-                let object: [String: Any]?
 
+                let object: [String: Any]?
                 if let array = parsed as? [[String: Any]] {
                     object = array.first
                 } else {
@@ -111,30 +101,34 @@ final class LicenseManager: ObservableObject {
                 let valid = (object?["valid"] as? Bool) ?? false
                 let expiryText = object?["expires_at"] as? String
 
-                isBusy = false
+                await MainActor.run {
+                    self.isBusy = false
 
-                guard valid else {
-                    isActive = false
-                    message = "Invalid, expired, or inactive key"
-                    delete(keyAccount)
-                    return
+                    guard valid else {
+                        self.isActive = false
+                        self.message = "Invalid, expired, or inactive key"
+                        self.delete(self.keyAccount)
+                        return
+                    }
+
+                    self.isActive = true
+                    self.expirationDate = expiryText.flatMap(Self.parseDate)
+
+                    if saveIfValid {
+                        self.save(key, for: self.keyAccount)
+                    }
+
+                    self.message = "Key verified successfully"
                 }
-
-                isActive = true
-                expirationDate = expiryText.flatMap(Self.parseDate)
-
-                if saveIfValid {
-                    save(key, for: keyAccount)
-                }
-
-                message = "Key verified successfully"
             } catch {
-                isBusy = false
-                isActive = false
-                message = "Could not verify key. Check your internet and try again."
+                await MainActor.run {
+                    self.isBusy = false
+                    self.isActive = false
+                    self.message =
+                        "Could not verify key. Check your internet and try again."
+                }
             }
         }
-        #endif
     }
 
     func rememberedKey() -> String? {
