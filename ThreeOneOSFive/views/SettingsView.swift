@@ -1,209 +1,120 @@
 
 import SwiftUI
+import UIKit
 
-struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.appLanguage) private var language
-    @EnvironmentObject private var appState: AppState
+enum AppTheme {
+    // Adaptive colors: light mode uses white backgrounds;
+    // dark mode uses black backgrounds.
+    static let accent = Color(red: 0.20, green: 0.62, blue: 0.98)
+    static let secondaryAccent = Color(red: 0.48, green: 0.78, blue: 1.00)
 
-    @AppStorage(AppLanguage.storageKey)
-    private var languageCode = AppLanguage.english.rawValue
+    static let pageBackground = Color(uiColor: .systemBackground)
+    static let consoleBackground = Color(uiColor: .secondarySystemBackground)
+    static let referenceCard = Color(uiColor: .secondarySystemGroupedBackground)
 
-    @AppStorage("vexo.darkTheme")
-    private var darkTheme = false
+    static let pageInset: CGFloat = 16
+    static let rowIconSize: CGFloat = 17
+    static let rowIconFrame: CGFloat = 28
+    static let fileRowIconSize: CGFloat = 17
+    static let fileRowIconFrame: CGFloat = 30
+    static let fileRowHeight: CGFloat = 60
+    static let appIconSize: CGFloat = 32
+    static let emptyIconSize: CGFloat = 30
+    static let selectionIconSize: CGFloat = 18
+}
+
+struct AppRowIcon: View {
+    let systemName: String
+    var tint: Color = AppTheme.accent
+    var symbolSize: CGFloat = AppTheme.rowIconSize
+    var frameSize: CGFloat = AppTheme.rowIconFrame
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack(spacing: 14) {
-                        AppLogo(size: 48)
+        ZStack {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(tint.opacity(0.12))
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("VEXO EXTERNAL")
-                                .font(.headline)
-
-                            Text(language.text("common.version", appVersion))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section("Appearance") {
-                    Toggle("Black / Dark Theme", isOn: $darkTheme)
-
-                    Text(
-                        darkTheme
-                            ? "Dark appearance selected."
-                            : "White and light-blue appearance selected."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-
-                Section(language.text("settings.language")) {
-                    Picker(
-                        language.text("settings.language"),
-                        selection: $languageCode
-                    ) {
-                        ForEach(AppLanguage.allCases) { option in
-                            Text(option.displayName)
-                                .tag(option.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-
-                Section(language.text("common.device")) {
-                    LabeledContent(
-                        language.text("dashboard.hardware_model"),
-                        value: AppInfo.displayMachineName
-                    )
-
-                    LabeledContent(
-                        language.text("settings.ios_version"),
-                        value: "\(AppInfo.osVersion) (\(AppInfo.osBuild))"
-                    )
-                }
-
-                Section {
-                    HStack {
-                        Text(language.text("settings.current_version"))
-
-                        Spacer()
-
-                        Text(
-                            language.text(
-                                appState.isSupported
-                                    ? "settings.supported"
-                                    : "settings.unsupported"
-                            )
-                        )
-                        .foregroundStyle(
-                            appState.isSupported ? Color.green : Color.red
-                        )
-                    }
-
-                    LabeledContent(
-                        "iOS 17",
-                        value: ExploitSupportPolicy.verifiedIOS17Range
-                    )
-
-                    LabeledContent(
-                        "iOS 18",
-                        value: ExploitSupportPolicy.verifiedIOS18Range
-                    )
-
-                    LabeledContent(
-                        "iOS 26",
-                        value: ExploitSupportPolicy.verifiedIOS26Range
-                    )
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("iOS 27.0")
-                            .font(.body)
-
-                        ForEach(
-                            ExploitSupportPolicy.verifiedIOS27Builds,
-                            id: \.build
-                        ) { version in
-                            Text(versionLabel(version))
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                } header: {
-                    Text(language.text("settings.verified_versions"))
-                } footer: {
-                    Text(language.text("settings.supported_versions_footer"))
-                }
-            }
-            .tint(AppTheme.accent)
-            .scrollContentBackground(.hidden)
-            .background(
-                darkTheme
-                    ? Color.black
-                    : Color.white
-            )
-            .preferredColorScheme(darkTheme ? .dark : .light)
-            .navigationTitle(language.text("settings.title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(language.text("common.done")) {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
+            Image(systemName: systemName)
+                .font(.system(size: symbolSize, weight: .medium))
+                .foregroundStyle(tint)
         }
-        .preferredColorScheme(darkTheme ? .dark : .light)
+        .frame(width: frameSize, height: frameSize)
+        .accessibilityHidden(true)
     }
+}
 
-    private var appVersion: String {
-        Bundle.main.object(
-            forInfoDictionaryKey: "AppReleaseDisplayVersion"
-        ) as? String
-        ?? Bundle.main.object(
-            forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String
-        ?? "1.0"
-    }
+struct AppSearchField: View {
+    @Binding var text: String
+    let prompt: String
+    let clearLabel: String
 
-    private func versionLabel(
-        _ version: (beta: Int, publicBeta: Int?, build: String)
-    ) -> String {
-        if let publicBeta = version.publicBeta {
-            return language.text(
-                "settings.developer_public_beta_build",
-                Int64(version.beta),
-                Int64(publicBeta),
-                version.build
-            )
-        }
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
-        return language.text(
-            "settings.developer_beta_build",
-            Int64(version.beta),
-            version.build
-        )
-    }
+            TextField(prompt, text: $text)
+                .font(.body)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
 
-    @ViewBuilder
-    private func creditsRow(
-        name: String,
-        role: String,
-        url: String
-    ) -> some View {
-        if let destination = URL(string: url) {
-            Link(destination: destination) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-
-                        Text(role)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "arrow.up.right")
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(width: 28, height: 28)
+                        .foregroundStyle(.tertiary)
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel(clearLabel)
             }
-            .accessibilityLabel(
-                language.text("accessibility.open_profile", name)
-            )
         }
+        .padding(.horizontal, 11)
+        .frame(minHeight: 36)
+        .background(
+            Color(uiColor: .tertiarySystemFill),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+        .padding(.horizontal, AppTheme.pageInset)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+}
+
+struct AppLogo: View {
+    var size: CGFloat = 44
+
+    var body: some View {
+        Group {
+            if let icon = UIImage(named: "AppIcon60x60")
+                ?? Bundle.main.path(
+                    forResource: "AppIcon60x60@2x",
+                    ofType: "png"
+                ).flatMap(UIImage.init(contentsOfFile:))
+                ?? UIImage(named: "AppIcon") {
+
+                Image(uiImage: icon)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppTheme.accent)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: size * 0.22,
+                style: .continuous
+            )
+        )
+        .accessibilityHidden(true)
     }
 }
